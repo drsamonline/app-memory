@@ -24,6 +24,10 @@ function build(seed) {
   var dom = new JSDOM(fs.readFileSync(PAGE, "utf8"), { url: "https://example.test/play/index.html", runScripts: "outside-only", pretendToBeVisual: true });
   var w = dom.window;
   Object.defineProperty(w, "crypto", { value: webcrypto, configurable: true });
+  /* CI's jsdom has neither TextEncoder nor TextDecoder; removing them here reproduces that, so the
+     engine's own UTF-8 codec is what gets tested rather than Node's global */
+  try { delete w.TextEncoder; } catch (e) { w.TextEncoder = undefined; }
+  try { delete w.TextDecoder; } catch (e) { w.TextDecoder = undefined; }
   if (seed) Object.keys(seed).forEach(function (k) { w.localStorage.setItem(k, seed[k]); });
   w.URL.createObjectURL = function () { return "blob:x"; };
   w.URL.revokeObjectURL = function () {};

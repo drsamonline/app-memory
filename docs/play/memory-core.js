@@ -27,6 +27,42 @@
   function clean(s) { return String(s == null ? "" : s).replace(/\s+/g, " ").trim(); }
   function pad(n) { return (n < 10 ? "0" : "") + n; }
 
+
+  /* TextEncoder/TextDecoder are not present in every environment this runs in (jsdom's window has
+   * neither), so the engine carries a small UTF-8 codec rather than assuming them. */
+  function utf8Encode(str) {
+    if (typeof TextEncoder === "function") return new TextEncoder().encode(String(str));
+    var out = [], i, c, c2, cp;
+    var s = String(str);
+    for (i = 0; i < s.length; i++) {
+      c = s.charCodeAt(i);
+      if (c < 0x80) out.push(c);
+      else if (c < 0x800) out.push(0xc0 | (c >> 6), 0x80 | (c & 63));
+      else if (c >= 0xd800 && c <= 0xdbff) {
+        c2 = s.charCodeAt(++i);
+        cp = 0x10000 + ((c - 0xd800) << 10) + (c2 - 0xdc00);
+        out.push(0xf0 | (cp >> 18), 0x80 | ((cp >> 12) & 63), 0x80 | ((cp >> 6) & 63), 0x80 | (cp & 63));
+      } else out.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+    }
+    return new Uint8Array(out);
+  }
+  function utf8Decode(buf) {
+    if (typeof TextDecoder === "function") return new TextDecoder().decode(buf);
+    var b = new Uint8Array(buf), s = "", i = 0, c, cp;
+    while (i < b.length) {
+      c = b[i++];
+      if (c < 0x80) s += String.fromCharCode(c);
+      else if (c < 0xe0) s += String.fromCharCode(((c & 31) << 6) | (b[i++] & 63));
+      else if (c < 0xf0) s += String.fromCharCode(((c & 15) << 12) | ((b[i++] & 63) << 6) | (b[i++] & 63));
+      else {
+        cp = ((c & 7) << 18) | ((b[i++] & 63) << 12) | ((b[i++] & 63) << 6) | (b[i++] & 63);
+        cp -= 0x10000;
+        s += String.fromCharCode(0xd800 + (cp >> 10), 0xdc00 + (cp & 1023));
+      }
+    }
+    return s;
+  }
+
   function subtle() {
     var c = (typeof globalThis !== "undefined" && globalThis.crypto) || null;
     return c && c.subtle ? c.subtle : null;
@@ -64,7 +100,7 @@
     var pass = String(passphrase || "");
     if (pass.length < 8) return { ok: false, field: "passphrase", reason: "the passphrase needs at least 8 characters: it is the only thing protecting the store" };
     var salt = saltB64 ? b64ToBytes(saltB64) : randomBytes(16);
-    var base = await st.importKey("raw", new TextEncoder().encode(pass), "PBKDF2", false, ["deriveKey"]);
+    var base = await st.importKey("raw", utf8Encode(pass), "PBKDF2", false, ["deriveKey"]);
     var key = await st.deriveKey(
       { name: "PBKDF2", salt: salt, iterations: ITERATIONS, hash: "SHA-256" },
       base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]
@@ -75,7 +111,7 @@
   async function encrypt(key, text) {
     var st = subtle();
     var iv = randomBytes(12);
-    var ct = await st.encrypt({ name: "AES-GCM", iv: iv }, key, new TextEncoder().encode(String(text)));
+    var ct = await st.encrypt({ name: "AES-GCM", iv: iv }, key, utf8Encode(String(text)));
     return { iv: bytesToB64(iv), ct: bytesToB64(ct) };
   }
 
@@ -83,7 +119,7 @@
     var st = subtle();
     try {
       var pt = await st.decrypt({ name: "AES-GCM", iv: b64ToBytes(blob.iv) }, key, b64ToBytes(blob.ct));
-      return { ok: true, text: new TextDecoder().decode(pt) };
+      return { ok: true, text: utf8Decode(pt) };
     } catch (e) {
       return { ok: false, reason: "this entry cannot be decrypted with that passphrase" };
     }
