@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en-IN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memory — keep the day, privately</title>
+<meta name="description" content="A private capture store, encrypted at rest with a key only you hold. Nothing leaves this device except an export you make.">
+<meta name="theme-color" content="#0e1114">
+<style>
+  :root{--bg:#0e1114;--panel:#151a1f;--ink:#e8e6e1;--muted:#98a0a8;--line:#28303a;--accent:#5d8a9c}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif}
+  main{max-width:760px;margin:0 auto;padding:48px 20px 64px}
+  h1{font-size:33px;line-height:1.15;letter-spacing:-.02em;margin:0 0 10px}
+  .lede{font-size:18px;color:var(--muted);margin:0 0 26px}
+  .cta{display:inline-block;background:var(--accent);color:#08131a;text-decoration:none;font-weight:700;padding:13px 22px;border-radius:11px}
+  .status{margin:26px 0;padding:14px 16px;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;background:var(--panel);font-size:14px;color:var(--muted)}
+  .status b{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink);margin-bottom:4px}
+  h2{font-size:17px;margin:30px 0 8px;color:var(--ink)}
+  ul{padding-left:20px}li{margin:5px 0;color:var(--muted)}
+  code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;background:#1b222a;padding:1px 5px;border-radius:4px}
+  table{border-collapse:collapse;width:100%;font-size:14px;margin-top:8px}
+  th,td{text-align:left;border-bottom:1px solid var(--line);padding:8px;vertical-align:top;color:var(--muted)}
+  th{color:var(--ink);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+  footer{margin-top:42px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:12px}
+  a{color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+  <h1>Memory</h1>
+  <p class="lede">Keep the day, privately. Every capture is encrypted with a key only you hold, and the export is the only way anything leaves.</p>
+
+  <a class="cta" href="play/index.html">Open Memory</a>
+
+  <div class="status">
+    <b>Status</b>
+    Built and working offline: AES-256-GCM over every capture, with the key derived from your passphrase (PBKDF2-SHA256, 150,000 rounds) and
+    never stored; search that decrypts in memory at the moment you ask; a clip with no words kept and marked “no words heard”; and an export
+    that is ciphertext only.
+    <br><b>Release</b>: Windows EXE, Android APK and Linux binary, built from this source in CI — <a href="https://github.com/drsamonline/app-memory/releases/tag/app-latest">app-latest</a>.
+    <br><b>Not built</b>: always-listening audio capture and on-device transcription. There is no speech model in this estate, so you type the
+    words or keep a clip marked “no words heard” — said here rather than shipping a microphone that records nothing useful.
+  </div>
+
+  <h2>The privacy is architectural, not a promise</h2>
+  <ul>
+    <li><strong>Encrypted before it is written.</strong> The word you search for is not in the stored bytes at all — the test searches them for it and finds nothing.</li>
+    <li><strong>The key is never stored.</strong> It is derived from your passphrase each time, and the passphrase is the only way in.</li>
+    <li><strong>No network code anywhere.</strong> No <code>fetch</code>, no endpoint, no URL in the engine; CSP <code>connect-src 'none'</code>.</li>
+    <li><strong>The export is the only way out</strong>, and it leaves encrypted.</li>
+  </ul>
+
+  <h2>What it will not do</h2>
+  <ul>
+    <li><strong>Upload anything.</strong> There is nothing in the app that could.</li>
+    <li><strong>Store a word in the clear.</strong> Not the words, not the place you typed.</li>
+    <li><strong>Drop a silent clip.</strong> It is kept and marked, so a gap in the day is visible.</li>
+    <li><strong>Start fresh over an unreadable store.</strong> A broken store would look like a quiet day.</li>
+    <li><strong>Keep capturing quietly when storage fails.</strong> Capture stops and says so, loudly.</li>
+  </ul>
+
+  <h2>When things go wrong</h2>
+  <table>
+    <tr><th>Case</th><th>What happens</th></tr>
+    <tr><td>Bad input</td><td>A capture with neither words nor a clip is refused. A passphrase under eight characters is refused.</td></tr>
+    <tr><td>No network</td><td>Nothing changes; nothing ever leaves.</td></tr>
+    <tr><td>Storage full or unavailable</td><td><strong>CAPTURE STOPPED</strong>, loudly, and the oldest unsaved hour is reported lost.</td></tr>
+    <tr><td>Corrupt saved state</td><td>Reported and offered for export; never replaced with a fresh store.</td></tr>
+  </table>
+
+  <h2>How to run it</h2>
+  <ul>
+    <li><strong>Here</strong>: <a href="play/index.html">play/index.html</a>, or install it from your browser's menu.</li>
+    <li><strong>Offline file</strong>: open <code>docs/play/index.html</code> straight from disk.</li>
+    <li><strong>Tests</strong>: <code>node tests/self-tests.js</code> — the spec's countable done-means is asserted there, including that the word is absent from the stored bytes.</li>
+  </ul>
+
+  <footer>
+    PolyForm Noncommercial 1.0.0 · (c) 2026 Dr Sohil Momin ·
+    <a href="https://github.com/drsamonline/app-memory">source</a>
+  </footer>
+</main>
+</body>
+</html>

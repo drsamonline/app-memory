@@ -1,0 +1,36 @@
+NOTICE
+======
+
+Memory — https://github.com/drsamonline/app-memory
+Copyright 2026 Dr Sohil Momin. Licensed under PolyForm Noncommercial 1.0.0 (see LICENSE).
+
+Third-party components
+----------------------
+
+None. Memory has no third-party dependency and no CDN.
+
+Vendored from this project's own kits (same licence, same author), copied verbatim on
+26/11/2026:
+
+- web-kit 0.1.0 — docs/play/web-kit.js — the offline shell, storage helpers and PWA registration
+- export-kit 1.0.0 — docs/play/export-kit.js — Blob download, used for the ciphertext export
+
+Neither kit is modified. Neither makes a network request.
+
+Cryptography
+------------
+
+AES-256-GCM with a 96-bit random IV per capture, and a key derived from the passphrase with
+PBKDF2-SHA256 at 150,000 iterations over a 128-bit random salt. Both use the platform's WebCrypto
+implementation — this app ships no cryptography of its own, which is the only responsible way to do
+it. The salt is stored (it is not secret); the key and the passphrase are not.
+
+What is stored in the clear: the time of each capture, a kind label, the clip length, and the
+"no words heard" flag. Everything the person typed — the words and the place — is inside the
+ciphertext.
+
+What this app is not
+--------------------
+
+It is not a backup service and it cannot recover a forgotten passphrase. If the passphrase is lost,
+the store is lost: that is the same property that makes it private.

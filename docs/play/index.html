@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en-IN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memory — keep the day, privately</title>
+<meta name="description" content="A private capture store, encrypted at rest with a key only you hold. Nothing leaves this device except an export you make.">
+<meta name="theme-color" content="#0e1114">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+  :root{--bg:#0e1114;--panel:#151a1f;--ink:#e8e6e1;--muted:#98a0a8;--line:#28303a;--accent:#5d8a9c;--accent-ink:#08131a;
+        --bad:#e2b4b4;--ok:#b7d8cd;--warn:#e2d0a8;
+        --mono:ui-monospace,Menlo,Consolas,monospace;--sans:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans",sans-serif}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink)}
+  body{font-family:var(--sans);line-height:1.55;font-size:15px}
+  header.top{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;padding:14px 20px;border-bottom:1px solid var(--line)}
+  header.top h1{font-size:17px;margin:0}
+  header.top p{margin:0;color:var(--muted);font-size:13px}
+  header.top a{margin-left:auto;color:var(--accent);font-size:13px;text-decoration:none;border-bottom:1px solid currentColor}
+  main{max-width:820px;margin:0 auto;padding:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:15px;margin-bottom:14px}
+  .card h2{font-size:15px;margin:0 0 6px}
+  .card p.claim{margin:0 0 8px;color:var(--muted);font-size:13px}
+  label.fld{display:block;font-size:11px;color:var(--muted);margin:9px 0 4px;text-transform:uppercase;letter-spacing:.08em}
+  input[type=text],textarea{font:inherit;font-size:14px;width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:#101418;color:var(--ink)}
+  textarea{resize:vertical}
+  button{font:inherit;font-size:14px;padding:9px 15px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+  button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+  button.small{padding:5px 10px;font-size:12px;border-radius:7px}
+  .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+  .bar .grow{flex:1}
+  .hint{color:var(--muted);font-size:12px}
+  .status{margin:10px 0;padding:10px 12px;border-radius:9px;border:1px solid var(--line);background:var(--panel);font-size:13px;display:none}
+  .status.show{display:block}
+  .status.bad{border-color:#6b2b2b;color:var(--bad)}
+  .status.ok{border-color:#2f5d4f;color:var(--ok)}
+  .status.warn{border-color:#5d4a22;color:var(--warn)}
+  ul.hits{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:8px}
+  ul.hits li{border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:9px;padding:10px 12px;background:#12171c;font-size:14px}
+  ul.hits li .when{display:block;font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:4px}
+  .lock{margin-bottom:14px}
+  footer{max-width:820px;margin:0 auto;padding:18px 20px 44px;color:var(--muted);font-size:12px;border-top:1px solid var(--line)}
+  [hidden]{display:none !important}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Memory</h1>
+  <p>Keep the day, privately. Encrypted at rest with a key only you hold.</p>
+  <a href="../index.html">about</a>
+</header>
+
+<main>
+  <div class="status" id="status" role="status" aria-live="polite"></div>
+
+  <section class="card" id="lockCard">
+    <h2>The key</h2>
+    <p class="claim">Your passphrase derives the key that encrypts every capture. The key is never stored, and there is no way to
+      recover the store without it. Eight characters minimum.</p>
+    <label class="fld" for="pass">Passphrase</label>
+    <input type="text" id="pass" autocomplete="off" placeholder="something only you know">
+    <div class="bar">
+      <button class="primary" type="button" id="unlockBtn">Unlock</button>
+      <span class="grow"></span>
+      <span class="hint" id="lockNote"></span>
+    </div>
+  </section>
+
+  <section class="card" id="captureCard" hidden>
+    <h2>Capture something</h2>
+    <p class="claim">The words are encrypted before they are written, so searching the stored bytes for what you typed finds nothing.</p>
+    <label class="fld" for="capText">What happened, or where you put it</label>
+    <textarea id="capText" rows="2" placeholder="e.g. the passport is in the blue almirah"></textarea>
+    <div class="bar">
+      <div><label class="fld" for="capPlace">Place (optional)</label><input type="text" id="capPlace" style="width:220px" placeholder="e.g. almirah, top shelf"></div>
+      <div><label class="fld" for="capKind">Kind</label><input type="text" id="capKind" value="capture" style="width:150px"></div>
+      <button class="primary" type="button" id="capBtn" style="margin-top:16px">Keep it</button>
+      <button type="button" class="small" id="clipBtn" style="margin-top:16px">Keep a clip with no words</button>
+    </div>
+    <div class="hint" id="capNote" style="margin-top:8px"></div>
+  </section>
+
+  <section class="card" id="searchCard" hidden>
+    <h2>Find it again</h2>
+    <p class="claim">Search decrypts in memory, just now. Nothing is indexed on disk, and the index does not exist between searches.</p>
+    <div class="bar" style="margin-top:0">
+      <input type="text" id="q" placeholder="a word you said" style="flex:1">
+      <button class="primary" type="button" id="searchBtn">Search</button>
+    </div>
+    <div class="hint" id="searchSays" style="margin-top:8px"></div>
+    <ul class="hits" id="hitList"></ul>
+  </section>
+
+  <div class="bar" id="ioBar" hidden>
+    <button type="button" class="small" id="exportBtn">Export the store (ciphertext)</button>
+    <span class="hint" id="ioNote"></span>
+  </div>
+
+  <footer>
+    Memory has no network code at all: no fetch, no endpoint, and the page forbids connections. The export is the only way anything leaves, and
+    it leaves encrypted. On-device transcription is not built — you type the words, or keep a clip marked “no words heard”.
+    <br>PolyForm Noncommercial 1.0.0 · (c) 2026 Dr Sohil Momin ·
+    <a href="https://github.com/drsamonline/app-memory/releases/tag/app-latest">Windows, Android and Linux builds</a>
+  </footer>
+</main>
+
+<script src="web-kit.js"></script>
+<script src="export-kit.js"></script>
+<script src="memory-core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
